@@ -15,7 +15,6 @@ boolean ehOperador(char c) {
 }
 
 boolean removeEspacosValidando(char *str) {
-    // TODO: validar se existem apenas numeros e operadores
     int i, j = 0;
     int tamanho = strlen(str);
 
@@ -30,6 +29,7 @@ boolean removeEspacosValidando(char *str) {
                 isdigit((unsigned char)str[i + 1])) {
                 return false; 
             }
+            continue;
         }
         str[j] = str[i];
         j++;
