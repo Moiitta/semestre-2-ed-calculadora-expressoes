@@ -113,7 +113,7 @@ boolean free_pilha (Pilha* p)
     */
 
     //for (int i=0; i<(*p).qtd_atual; i++)
-    for (int i=0; i<p->qtd_atual; i++)
+    for (unsigned  i=0; i<p->qtd_atual; i++)
     {
         //free((*p).vetor[--((*p).qtd_atual)]);
         free(p->vetor[--(p->qtd_atual)]);
