@@ -1,3 +1,34 @@
+/*
+- A pilha deve terminar com apenas um valor, que é o resultado final da expressão.
+- Expressões malformadas e divisões por zero devem ser tratadas adequadamente, com mensagens de erro claras.
+
+Psedo código
+Para cada item da Fila de Entrada
+
+1. Se for número
+    1. Adiciona número na Fila de Saída
+2. Se for '('
+    1. Empilha '('
+3. Se for ')'
+    1. Enquanto o topo da Pilha de Operadores for diferente de '('
+        1. Desempilha a Pilha de Operadores e pega o Valor
+        2. Adiciona Valor à Fila de Saída
+    2. Desempilha '(' (não adiciona à Fila de Saída)
+4. Se for Operador (+, -, *, /, ^)
+    1. Se a Pilha de Operadores está vazia
+        1. Empilha o Operador
+    2. Se a Pilha de Operadores não está vazia
+        1. Enquanto a Pilha não está vazia **e** a Tabela[Topo_da_Pilha][Operador_Atual] retorna True
+            1. Desempilha a Pilha de Operadores e pega o Valor
+            2. Adiciona Valor à Fila de Saída
+        2. Empilha o Operador Atual
+
+Após percorrer toda a Fila de Entrada:
+
+1. Enquanto a Pilha de Operadores não estiver vazia
+    1. Desempilha e adiciona à Fila de Saída
+*/
+
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
