@@ -85,6 +85,19 @@ void test_expressao_malformada(void) {
     TEST_ASSERT_FALSE(calculaExpressao("5+", &resultado));
 }
 
+void test_numero_negativo(void) {
+    float resultado;
+    TEST_ASSERT_TRUE(calculaExpressao("-5+4", &resultado));
+    TEST_ASSERT_EQUAL_FLOAT(1.0, resultado);
+}
+
+void test_numero_decimal(void) {
+    float resultado;
+    TEST_ASSERT_TRUE(calculaExpressao("10.5+0.5", &resultado));
+    TEST_ASSERT_EQUAL_FLOAT(11.0, resultado);
+}
+
+
 // ---- runner isolado ----
 int main(void) {
     run_isolated(test_soma_simples);

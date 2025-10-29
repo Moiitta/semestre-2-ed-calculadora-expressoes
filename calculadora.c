@@ -65,16 +65,19 @@ boolean ehOperador(char c) {
             c == ')');
 }
 
+boolean ehDecimal(char c) {
+    return (c == '.');
+}
+
 boolean removeEspacosValidando(char *str) {
     int i, j = 0;
     int tamanho = strlen(str);
 
     for (i = 0; i < tamanho; i++) {
-        if (!(isdigit((unsigned char)str[i]) || ehOperador(str[i]) || isspace((unsigned char)str[i]))) {
+        if (!(isdigit((unsigned char)str[i]) || ehDecimal(str[i]) || ehOperador(str[i]) || isspace((unsigned char)str[i]))) {
             printf("Erro: caractere inválido: %c\n", str[i]);
             return false;
         }
-        // Verifica se o digito atual é espaço e está entre dígitos 
         if (isspace((unsigned char)str[i])) {
             if (i > 0 && isdigit((unsigned char)str[i - 1]) &&
                 isdigit((unsigned char)str[i + 1])) {
@@ -96,12 +99,15 @@ boolean converteTokens(Fila* fila, char* expressao) {
     int i,j = 0;
     char temp[32];
 
+    // 0.5 + 0.5
+    // temp = 0
+
     for(i = 0; i < tamanho; i++) {
-        if(isdigit((unsigned char)expressao[i]) == true) {
+        if(isdigit((unsigned char)expressao[i]) == true || ehDecimal(expressao[i])) {
             temp[j] = expressao[i];
             j++;
 
-            if(isdigit((unsigned char)expressao[i + 1]) == false) {
+            if(isdigit((unsigned char)expressao[i + 1]) == false && !ehDecimal((unsigned char)expressao[i + 1])) {
                 temp[j] = '\0';
                 j = 0;
                 guarde_na_fila(fila, (ElementoDeFila)strdup(temp));
@@ -126,19 +132,15 @@ int prioridade(char op) {
     }
 }
 
-// Retorna true se deve desempilhar o operador do topo
 boolean deveDesempilhar(char topo, char atual) {
     if (topo == '(') return false;
     int pTopo = prioridade(topo);
     int pAtual = prioridade(atual);
     if (pTopo > pAtual) return true;
-    if (pTopo == pAtual && atual != '^') return true; // ^ é associativo à direita
+    if (pTopo == pAtual && atual != '^') return true;
     return false;
 }
 
-// ----------------------------------------------------
-// Etapa 2: Infixa -> Pós-fixa
-// ----------------------------------------------------
 boolean converteParaPosfixa(Fila *entrada, Fila *saida) {
     Pilha operadores;
     nova_pilha(&operadores, 100);
@@ -177,7 +179,6 @@ boolean converteParaPosfixa(Fila *entrada, Fila *saida) {
         remova_elemento_da_fila(entrada);
     }
 
-    // Desempilha o restante
     ElementoDePilha top;
     while (!pilha_vazia(operadores)) {
         recupere_da_pilha(operadores, &top);
@@ -189,9 +190,6 @@ boolean converteParaPosfixa(Fila *entrada, Fila *saida) {
     return true;
 }
 
-// ----------------------------------------------------
-// Etapa 3: Cálculo da expressão Pós-fixa
-// ----------------------------------------------------
 boolean calculaPosfixa(Fila *entrada, float *resultado) {
     Pilha resultados;
     nova_pilha(&resultados, 100);
@@ -261,9 +259,6 @@ boolean calculaPosfixa(Fila *entrada, float *resultado) {
     return true;
 }
 
-// ----------------------------------------------------
-// Integração com o seu código existente
-// ----------------------------------------------------
 boolean calculaExpressao(char* expressao, float* resultado) {
     boolean ok = removeEspacosValidando(expressao);
     if (!ok) { 
