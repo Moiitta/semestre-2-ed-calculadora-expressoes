@@ -69,6 +69,13 @@ boolean ehDecimal(char c) {
     return (c == '.');
 }
 
+static boolean ehTokenNumero(const char* tk) {
+    if (!tk || !tk[0]) return false;
+    if (isdigit((unsigned char)tk[0])) return true;
+    if (tk[0] == '.' && isdigit((unsigned char)tk[1])) return true;
+    return false;
+}
+
 boolean removeEspacosValidando(char *str) {
     int i, j = 0;
     int tamanho = strlen(str);
@@ -132,14 +139,37 @@ int prioridade(char op) {
     }
 }
 
-boolean deveDesempilhar(char topo, char atual) {
-    if (topo == '(') return false;
-    int pTopo = prioridade(topo);
-    int pAtual = prioridade(atual);
-    if (pTopo > pAtual) return true;
-    if (pTopo == pAtual && atual != '^') return true;
-    return false;
+static int idx(char op) {
+    switch (op) {
+        case '(': return 0;
+        case '^': return 1;
+        case '*': return 2;
+        case '/': return 3;
+        case '+': return 4;
+        case '-': return 5;
+        case ')': return 6;
+        default:  return -1;
+    }
 }
+
+static const int TABELA[7][7] = {
+/* topo\atual     (  ^  *  /  +  -  ) */
+ /* ( */        { 0, 0, 0, 0, 0, 0, 1 },
+ /* ^ */        { 0, 0, 1, 1, 1, 1, 1 },
+ /* * */        { 0, 0, 1, 1, 1, 1, 1 },
+ /* / */        { 0, 0, 1, 1, 1, 1, 1 },
+ /* + */        { 0, 0, 0, 0, 1, 1, 1 },
+ /* - */        { 0, 0, 0, 0, 1, 1, 1 },
+ /* ) */        { 0, 0, 0, 0, 0, 0, 0 },
+};
+
+static boolean deveDesempilharPorTabela(char topo, char atual) {
+    int i = idx(topo);
+    int j = idx(atual);
+    if (i < 0 || j < 0) return false;
+    return TABELA[i][j] ? true : false;
+}
+
 
 boolean converteParaPosfixa(Fila *entrada, Fila *saida) {
     Pilha operadores;
@@ -150,39 +180,56 @@ boolean converteParaPosfixa(Fila *entrada, Fila *saida) {
         recupere_da_fila(*entrada, &e);
         char *token = (char *)e;
 
-        if (isdigit(token[0])) {
+        if (ehTokenNumero(token)) {
             guarde_na_fila(saida, strdup(token));
         } else if (token[0] == '(') {
             guarde_na_pilha(&operadores, strdup(token));
         } else if (token[0] == ')') {
+            // Enquanto topo != '(' → desempilha para saída
             ElementoDePilha top;
+            boolean achouAbre = false;
             while (!pilha_vazia(operadores)) {
                 recupere_da_pilha(operadores, &top);
-                if (((char *)top)[0] == '(') {
-                    remova_elemento_da_pilha(&operadores);
+                if (((char*)top)[0] == '(') {
+                    remova_elemento_da_pilha(&operadores); // descarta '('
+                    achouAbre = true;
                     break;
                 }
-                guarde_na_fila(saida, strdup(top));
+                guarde_na_fila(saida, strdup((char*)top));
                 remova_elemento_da_pilha(&operadores);
             }
+            if (!achouAbre) {
+                printf("Erro: parenteses desbalanceados.\n");
+                return false;
+            }
         } else if (ehOperador(token[0])) {
+            // Enquanto pilha não vazia E Tabela[topo][atual] == T → desempilha topo para saída
             ElementoDePilha top;
             while (!pilha_vazia(operadores)) {
                 recupere_da_pilha(operadores, &top);
-                char topo = ((char *)top)[0];
-                if (!deveDesempilhar(topo, token[0])) break;
-                guarde_na_fila(saida, strdup((char *)top));
+                char topoChar = ((char*)top)[0];
+                if (!deveDesempilharPorTabela(topoChar, token[0])) break;
+                guarde_na_fila(saida, strdup((char*)top));
                 remova_elemento_da_pilha(&operadores);
             }
             guarde_na_pilha(&operadores, strdup(token));
+        } else {
+            printf("Erro: token invalido: %s\n", token);
+            return false;
         }
-        remova_elemento_da_fila(entrada);
+
+        remova_elemento_da_fila(entrada); // consome o token de entrada
     }
 
+    // Desempilha o restante
     ElementoDePilha top;
     while (!pilha_vazia(operadores)) {
         recupere_da_pilha(operadores, &top);
-        guarde_na_fila(saida, strdup((char *)top));
+        if (((char*)top)[0] == '(' || ((char*)top)[0] == ')') {
+            printf("Erro: parenteses desbalanceados.\n");
+            return false;
+        }
+        guarde_na_fila(saida, strdup((char*)top));
         remova_elemento_da_pilha(&operadores);
     }
 
@@ -199,53 +246,60 @@ boolean calculaPosfixa(Fila *entrada, float *resultado) {
         recupere_da_fila(*entrada, &e);
         char *token = (char *)e;
 
-        if (isdigit(token[0])) {
-            float *valor = malloc(sizeof(float));
-            *valor = atof(token);
+        if (ehTokenNumero(token)) {
+            float *valor = (float*)malloc(sizeof(float));
+            *valor = (float)atof(token);
             guarde_na_pilha(&resultados, valor);
         } else if (ehOperador(token[0])) {
+            // 1) Desempilha dois valores (Valor1 e Valor2)
             if (resultados.qtd_atual < 2) {
                 printf("Erro: expressao malformada (faltam operandos).\n");
                 return false;
             }
 
-            float *v1, *v2;
             ElementoDePilha el1, el2;
-            recupere_da_pilha(resultados, &el1);
-            v1 = (float *)el1;
-            remova_elemento_da_pilha(&resultados);
+            recupere_da_pilha(resultados, &el1); remova_elemento_da_pilha(&resultados);
+            recupere_da_pilha(resultados, &el2); remova_elemento_da_pilha(&resultados);
+            float *v1 = (float*)el1; // primeiro desempilhado = Valor1 (da direita)
+            float *v2 = (float*)el2; // segundo desempilhado = Valor2 (da esquerda)
 
-            recupere_da_pilha(resultados, &el2);
-            v2 = (float *)el2;
-            remova_elemento_da_pilha(&resultados);
-
-            float res = 0;
+            // 2) Se um dos valores for operador → erro (aqui nunca é, só empilhamos números)
+            // 3) Resultado = Valor2 (op) Valor1
+            float res = 0.0f;
             switch (token[0]) {
                 case '+': res = *v2 + *v1; break;
                 case '-': res = *v2 - *v1; break;
                 case '*': res = *v2 * *v1; break;
                 case '/':
-                    if (*v1 == 0) {
+                    if (*v1 == 0.0f) {
                         printf("Erro: divisao por zero.\n");
                         return false;
                     }
-                    res = *v2 / *v1;
-                    break;
+                    res = *v2 / *v1; break;
                 case '^': {
-                    res = 1;
-                    for (int i = 0; i < (int)(*v1); i++) res *= *v2;
+                    // expoente inteiro (conforme aula), simples e fiel
+                    int exp = (int)(*v1);
+                    res = 1.0f;
+                    for (int i = 0; i < exp; i++) res *= *v2;
                     break;
                 }
+                default:
+                    printf("Erro: operador invalido: %c\n", token[0]);
+                    return false;
             }
 
-            float *novo = malloc(sizeof(float));
+            float *novo = (float*)malloc(sizeof(float));
             *novo = res;
             guarde_na_pilha(&resultados, novo);
+        } else {
+            printf("Erro: token invalido na posfixa: %s\n", token);
+            return false;
         }
 
-        remova_elemento_da_fila(entrada);
+        remova_elemento_da_fila(entrada); // consome token
     }
 
+    // Ao final, a pilha deve ter exatamente 1 valor
     if (resultados.qtd_atual != 1) {
         printf("Erro: expressao malformada (sobraram operandos).\n");
         return false;
@@ -258,6 +312,7 @@ boolean calculaPosfixa(Fila *entrada, float *resultado) {
     free_pilha(&resultados);
     return true;
 }
+
 
 boolean calculaExpressao(char* expressao, float* resultado) {
     boolean ok = removeEspacosValidando(expressao);
