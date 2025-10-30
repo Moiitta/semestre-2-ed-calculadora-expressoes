@@ -71,10 +71,33 @@ boolean ehDecimal(char c) {
 
 static boolean ehTokenNumero(const char* tk) {
     if (!tk || !tk[0]) return false;
-    if (isdigit((unsigned char)tk[0])) return true;
-    if (tk[0] == '.' && isdigit((unsigned char)tk[1])) return true;
-    return false;
+
+    int i = 0;
+
+    if (tk[0] == '-') {
+        if (!tk[1]) return false;
+        i = 1;
+    }
+
+    boolean temDigito = false;
+    boolean temPonto = false;
+
+    for (; tk[i]; i++) {
+        if (isdigit((unsigned char)tk[i])) {
+            temDigito = true;
+            continue;
+        }
+        if (tk[i] == '.') {
+            if (temPonto) return false;
+            temPonto = true;
+            continue;
+        }
+        return false;
+    }
+
+    return temDigito;
 }
+
 
 boolean removeEspacosValidando(char *str) {
     int i, j = 0;
@@ -101,32 +124,42 @@ boolean removeEspacosValidando(char *str) {
 }
 
 boolean converteTokens(Fila* fila, char* expressao) {
-
     int tamanho = strlen(expressao);
-    int i,j = 0;
+    int i = 0, j = 0;
     char temp[32];
 
-    // 0.5 + 0.5
-    // temp = 0
+    while (i < tamanho) {
+        char c = expressao[i];
 
-    for(i = 0; i < tamanho; i++) {
-        if(isdigit((unsigned char)expressao[i]) == true || ehDecimal(expressao[i])) {
-            temp[j] = expressao[i];
-            j++;
+        if ((c == '-' && 
+            (i == 0 || expressao[i - 1] == '(')) ||
+            isdigit((unsigned char)c) || ehDecimal(c)) {
 
-            if(isdigit((unsigned char)expressao[i + 1]) == false && !ehDecimal((unsigned char)expressao[i + 1])) {
-                temp[j] = '\0';
-                j = 0;
-                guarde_na_fila(fila, (ElementoDeFila)strdup(temp));
+            j = 0;
+            temp[j++] = c;
+            i++;
+
+            while (i < tamanho && (isdigit((unsigned char)expressao[i]) || ehDecimal(expressao[i]))) {
+                temp[j++] = expressao[i++];
             }
-        } else {
-            char op[2] = {expressao[i], '\0'};
+
+            temp[j] = '\0';
+            guarde_na_fila(fila, strdup(temp));
+            continue;
+        }
+
+        // Operadores e parênteses
+        if (ehOperador(c)) {
+            char op[2] = {c, '\0'};
             guarde_na_fila(fila, strdup(op));
         }
+
+        i++;
     }
 
     return true;
 }
+
 
 int prioridade(char op) {
     switch (op) {
